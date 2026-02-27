@@ -17,8 +17,16 @@ object CsvParser {
         while (line != null) {
             val tokens = line.split(",")
             if (tokens.size >= 2) {
-                val businessName = tokens[0].trim().removeSurrounding("\"")
-                val phoneNumber = tokens[1].trim().removeSurrounding("\"")
+                val part1 = tokens[0].trim().removeSurrounding("\"")
+                val part2 = tokens[1].trim().removeSurrounding("\"")
+                
+                // If part1 starts with + or is digits, assume it's the phone number
+                val (phoneNumber, businessName) = if (part1.startsWith("+") || part1.any { it.isDigit() } && !part2.any { it.isDigit() }) {
+                    part1 to part2
+                } else {
+                    part2 to part1
+                }
+
                 if (businessName.isNotEmpty() && phoneNumber.isNotEmpty()) {
                     leads.add(Lead(businessName = businessName, phoneNumber = phoneNumber))
                 }

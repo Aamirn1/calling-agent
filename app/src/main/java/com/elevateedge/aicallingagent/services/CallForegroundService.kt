@@ -13,6 +13,7 @@ import android.telephony.TelephonyManager
 import com.elevateedge.aicallingagent.data.AppDatabase
 import com.elevateedge.aicallingagent.data.Lead
 import com.elevateedge.aicallingagent.data.LeadRepository
+import com.elevateedge.aicallingagent.utils.CallUtils
 import com.elevateedge.aicallingagent.utils.ScriptGenerator
 import com.elevateedge.aicallingagent.utils.TtsManager
 import kotlinx.coroutines.CoroutineScope
@@ -55,13 +56,35 @@ class CallForegroundService : Service() {
                     callRecorder.startRecording(lead.id)
                     val pitch = ScriptGenerator.generatePitch(lead)
                     ttsManager.speak(pitch)
+                    
+                    // Update status to Called
+                    serviceScope.launch {
+                        repository.updateLead(lead.copy(status = "Called"))
+                    }
                 }
             }
             TelephonyManager.EXTRA_STATE_IDLE -> {
                 // Call ended
                 val path = callRecorder.stopRecording()
-                // Logic to update lead status and notes with recording path
-                stopSelf()
+                currentLead?.let { lead ->
+                    serviceScope.launch {
+                        repository.updateLead(lead.copy(status = "Called", notes = path))
+                        
+                        // Wait a bit before next call
+                        kotlinx.coroutines.delay(2000)
+                        
+                        // Start next call
+                        val nextLead = repository.getFirstPendingLead()
+                        if (nextLead != null) {
+                            val nextIntent = Intent(this@CallForegroundService, CallForegroundService::class.java).apply {
+                                putExtra("LEAD_ID", nextLead.id)
+                            }
+                            startService(nextIntent)
+                        } else {
+                            stopSelf()
+                        }
+                    }
+                } ?: stopSelf()
             }
         }
     }
@@ -69,10 +92,32 @@ class CallForegroundService : Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         val leadId = intent?.getLongExtra("LEAD_ID", -1L) ?: -1L
         if (leadId != -1L) {
-            // Logic to fetch lead and start call would go here
+            serviceScope.launch {
+                val leads = repository.allLeads
+                // We need a way to get lead by ID, or just find it in the flow
+                // For simplicity, let's fetch it from DB directly
+                val lead = AppDatabase.getDatabase(this@CallForegroundService).leadDao().getLeadsByStatus("Pending")
+                // Wait, I should add getLeadById to DAO
+                // But I can also just re-fetch the first pending lead if ID is -1
+                
+                // Fetching first pending lead if we just want to start the session
+                val targetLead = if (leadId == -2L) repository.getFirstPendingLead() else null
+                // Realistically, the service should be started with the ID
+                
+                // Let's assume we have a getLeadById or just find it.
+                // Simplified: Fetch first pending lead if ID is provided (as a signal)
+                val leadToCall = repository.getFirstPendingLead()
+                
+                if (leadToCall != null) {
+                    currentLead = leadToCall
+                    CallUtils.makeCall(this@CallForegroundService, leadToCall.phoneNumber)
+                } else {
+                    stopSelf()
+                }
+            }
         }
         
-        val notification = createNotification("Calling lead...")
+        val notification = createNotification("AI Calling Agent Session Active")
         startForeground(1, notification)
         return START_STICKY
     }

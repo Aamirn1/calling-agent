@@ -22,6 +22,10 @@ class LeadRepository(private val leadDao: LeadDao) {
         leadDao.deleteLead(lead)
     }
 
+    suspend fun getFirstPendingLead(): Lead? {
+        return leadDao.getFirstPendingLead()
+    }
+
     suspend fun deleteAllLeads() {
         leadDao.deleteAllLeads()
     }

@@ -7,7 +7,12 @@ import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
+import android.Manifest
+import android.content.pm.PackageManager
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
 import androidx.appcompat.app.AppCompatActivity
+
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.elevateedge.aicallingagent.data.AppDatabase
 import com.elevateedge.aicallingagent.data.LeadRepository
@@ -17,6 +22,7 @@ import com.elevateedge.aicallingagent.ui.LeadViewModel
 import com.elevateedge.aicallingagent.ui.LeadViewModelFactory
 import com.elevateedge.aicallingagent.utils.CsvParser
 import com.elevateedge.aicallingagent.utils.AudioPlayer
+import com.elevateedge.aicallingagent.services.CallForegroundService
 
 
 class MainActivity : AppCompatActivity() {
@@ -58,8 +64,15 @@ class MainActivity : AppCompatActivity() {
         }
 
         binding.startSessionBtn.setOnClickListener {
-            // Future implementation for starting call session
-            Toast.makeText(this, "Starting call session...", Toast.LENGTH_SHORT).show()
+            if (checkPermissions()) {
+                val intent = Intent(this, CallForegroundService::class.java).apply {
+                    putExtra("LEAD_ID", -2L) // Signal to start with first pending lead
+                }
+                startForegroundService(intent)
+                Toast.makeText(this, "Starting call session...", Toast.LENGTH_SHORT).show()
+            } else {
+                requestPermissions()
+            }
         }
     }
 
@@ -73,5 +86,27 @@ class MainActivity : AppCompatActivity() {
         } catch (e: Exception) {
             Toast.makeText(this, "Error importing CSV: ${e.message}", Toast.LENGTH_SHORT).show()
         }
+    }
+    private fun checkPermissions(): Boolean {
+        val permissions = arrayOf(
+            Manifest.permission.CALL_PHONE,
+            Manifest.permission.RECORD_AUDIO,
+            Manifest.permission.READ_PHONE_STATE
+        )
+        return permissions.all {
+            ContextCompat.checkSelfPermission(this, it) == PackageManager.PERMISSION_GRANTED
+        }
+    }
+
+    private fun requestPermissions() {
+        ActivityCompat.requestPermissions(
+            this,
+            arrayOf(
+                Manifest.permission.CALL_PHONE,
+                Manifest.permission.RECORD_AUDIO,
+                Manifest.permission.READ_PHONE_STATE
+            ),
+            123
+        )
     }
 }

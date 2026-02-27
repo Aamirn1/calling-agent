@@ -23,6 +23,9 @@ interface LeadDao {
     @Delete
     suspend fun deleteLead(lead: Lead)
 
+    @Query("SELECT * FROM leads WHERE status = 'Pending' LIMIT 1")
+    suspend fun getFirstPendingLead(): Lead?
+
     @Query("DELETE FROM leads")
     suspend fun deleteAllLeads()
 }
