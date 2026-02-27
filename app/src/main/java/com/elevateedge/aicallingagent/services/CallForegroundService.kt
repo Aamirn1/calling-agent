@@ -103,10 +103,15 @@ class CallForegroundService : Service() {
                     
                     val apiKey = settingsManager.vapiApiKey.first()
                     val assistantId = settingsManager.vapiAssistantId.first()
+                    val phoneNumberId = settingsManager.vapiPhoneNumberId.first()
                     
                     if (!apiKey.isNullOrBlank()) {
                         // USE VAPI (INTERNET CALL)
-                        val vapiManager = VapiManager(apiKey, if (assistantId.isNullOrBlank()) null else assistantId)
+                        val vapiManager = VapiManager(
+                            apiKey = apiKey, 
+                            assistantId = if (assistantId.isNullOrBlank()) null else assistantId,
+                            phoneNumberId = if (phoneNumberId.isNullOrBlank()) null else phoneNumberId
+                        )
                         val result = vapiManager.startCall(leadToCall)
                         
                         if (result.isSuccess) {

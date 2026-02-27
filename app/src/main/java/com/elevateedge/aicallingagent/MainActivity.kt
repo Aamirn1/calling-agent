@@ -134,13 +134,18 @@ class MainActivity : AppCompatActivity() {
         val assistantIdInput = android.widget.EditText(this).apply {
             hint = "Vapi Assistant ID (Optional)"
         }
+        val phoneNumberIdInput = android.widget.EditText(this).apply {
+            hint = "Vapi Phone Number ID (Outbound)"
+        }
 
         layout.addView(apiKeyInput)
         layout.addView(assistantIdInput)
+        layout.addView(phoneNumberIdInput)
 
         CoroutineScope(Dispatchers.Main).launch {
             apiKeyInput.setText(settingsManager.vapiApiKey.first())
             assistantIdInput.setText(settingsManager.vapiAssistantId.first())
+            phoneNumberIdInput.setText(settingsManager.vapiPhoneNumberId.first())
         }
 
         androidx.appcompat.app.AlertDialog.Builder(this)
@@ -149,8 +154,9 @@ class MainActivity : AppCompatActivity() {
             .setPositiveButton("Save") { _, _ ->
                 val apiKey = apiKeyInput.text.toString()
                 val assistantId = assistantIdInput.text.toString()
+                val phoneNumberId = phoneNumberIdInput.text.toString()
                 CoroutineScope(Dispatchers.IO).launch {
-                    settingsManager.saveVapiSettings(apiKey, assistantId)
+                    settingsManager.saveVapiSettings(apiKey, assistantId, phoneNumberId)
                 }
                 Toast.makeText(this, "Settings saved. Now internet calls will be used.", Toast.LENGTH_SHORT).show()
             }

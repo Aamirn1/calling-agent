@@ -19,10 +19,12 @@ class SettingsManager(context: Context) {
         val KEY_PITCH = floatPreferencesKey("pitch")
         val KEY_VAPI_API_KEY = stringPreferencesKey("vapi_api_key")
         val KEY_VAPI_ASSISTANT_ID = stringPreferencesKey("vapi_assistant_id")
+        val KEY_VAPI_PHONE_NUMBER_ID = stringPreferencesKey("vapi_phone_number_id")
     }
 
     val vapiApiKey: Flow<String?> = dataStore.data.map { it[KEY_VAPI_API_KEY] }
     val vapiAssistantId: Flow<String?> = dataStore.data.map { it[KEY_VAPI_ASSISTANT_ID] }
+    val vapiPhoneNumberId: Flow<String?> = dataStore.data.map { it[KEY_VAPI_PHONE_NUMBER_ID] }
 
     val voiceName: Flow<String?> = dataStore.data.map { it[KEY_VOICE_NAME] }
     val speechRate: Flow<Float> = dataStore.data.map { it[KEY_SPEECH_RATE] ?: 1.0f }
@@ -36,10 +38,11 @@ class SettingsManager(context: Context) {
         }
     }
 
-    suspend fun saveVapiSettings(apiKey: String, assistantId: String?) {
+    suspend fun saveVapiSettings(apiKey: String, assistantId: String?, phoneNumberId: String?) {
         dataStore.edit {
             it[KEY_VAPI_API_KEY] = apiKey
             it[KEY_VAPI_ASSISTANT_ID] = assistantId ?: ""
+            it[KEY_VAPI_PHONE_NUMBER_ID] = phoneNumberId ?: ""
         }
     }
 }

@@ -7,7 +7,7 @@ import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 
-class VapiManager(private val apiKey: String, private val assistantId: String?) {
+class VapiManager(private val apiKey: String, private val assistantId: String?, private val phoneNumberId: String?) {
     
     private val service: VapiService by lazy {
         val logging = HttpLoggingInterceptor().setLevel(HttpLoggingInterceptor.Level.BODY)
@@ -28,7 +28,7 @@ class VapiManager(private val apiKey: String, private val assistantId: String?) 
             val script = ScriptGenerator.generatePitch(lead)
             
             val request = VapiCallRequest(
-                phoneNumberId = null, // Vapi will use its default or your provided one
+                phoneNumberId = if (phoneNumberId.isNullOrBlank()) null else phoneNumberId,
                 customer = VapiCustomer(number = lead.phoneNumber, name = lead.businessName),
                 assistantId = assistantId,
                 assistant = if (assistantId == null) VapiAssistant(
