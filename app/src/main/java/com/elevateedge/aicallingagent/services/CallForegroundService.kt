@@ -19,6 +19,9 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
+import com.elevateedge.aicallingagent.utils.CallRecorder
+import com.elevateedge.aicallingagent.utils.CallReceiver
+
 
 class CallForegroundService : Service() {
     private val serviceJob = SupervisorJob()
@@ -80,4 +83,28 @@ class CallForegroundService : Service() {
         ttsManager.release()
         serviceJob.cancel()
     }
+    private fun createNotification(content: String): Notification {
+        return NotificationCompat.Builder(this, CHANNEL_ID)
+            .setContentTitle("AI Calling Agent")
+            .setContentText(content)
+            .setSmallIcon(android.R.drawable.ic_menu_call)
+            .setPriority(NotificationCompat.PRIORITY_LOW)
+            .build()
+    }
 
+    private fun createNotificationChannel() {
+        val serviceChannel = NotificationChannel(
+            CHANNEL_ID,
+            "AI Calling Agent Service Channel",
+            NotificationManager.IMPORTANCE_DEFAULT
+        )
+        val manager = getSystemService(NotificationManager::class.java)
+        manager.createNotificationChannel(serviceChannel)
+    }
+
+    override fun onBind(intent: Intent?): IBinder? = null
+
+    companion object {
+        const val CHANNEL_ID = "CallServiceChannel"
+    }
+}
