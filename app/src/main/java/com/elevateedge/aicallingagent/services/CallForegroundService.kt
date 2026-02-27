@@ -20,7 +20,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import com.elevateedge.aicallingagent.utils.CallRecorder
-import com.elevateedge.aicallingagent.utils.CallReceiver
+import com.elevateedge.aicallingagent.services.CallReceiver
 
 
 class CallForegroundService : Service() {
