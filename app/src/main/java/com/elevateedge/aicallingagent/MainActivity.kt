@@ -12,10 +12,16 @@ import android.content.pm.PackageManager
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.appcompat.app.AppCompatActivity
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
+
 
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.elevateedge.aicallingagent.data.AppDatabase
 import com.elevateedge.aicallingagent.data.LeadRepository
+import com.elevateedge.aicallingagent.data.SettingsManager
 import com.elevateedge.aicallingagent.databinding.ActivityMainBinding
 import com.elevateedge.aicallingagent.ui.LeadAdapter
 import com.elevateedge.aicallingagent.ui.LeadViewModel
@@ -29,6 +35,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var binding: ActivityMainBinding
     private val database by lazy { AppDatabase.getDatabase(this) }
     private val repository by lazy { LeadRepository(database.leadDao()) }
+    private val settingsManager by lazy { SettingsManager(this) }
     private val viewModel: LeadViewModel by viewModels {
         LeadViewModelFactory(repository)
     }
@@ -61,6 +68,10 @@ class MainActivity : AppCompatActivity() {
 
         binding.importLeadsBtn.setOnClickListener {
             csvPickerLauncher.launch("text/comma-separated-values")
+        }
+
+        binding.settingsBtn.setOnClickListener {
+            showSettingsDialog()
         }
 
         binding.startSessionBtn.setOnClickListener {
@@ -108,5 +119,42 @@ class MainActivity : AppCompatActivity() {
             ),
             123
         )
+    }
+
+    private fun showSettingsDialog() {
+        val layout = android.widget.LinearLayout(this).apply {
+            orientation = android.widget.LinearLayout.VERTICAL
+            setPadding(60, 20, 60, 20)
+        }
+
+        val apiKeyInput = android.widget.EditText(this).apply {
+            hint = "Vapi API Key"
+            inputType = android.text.InputType.TYPE_CLASS_TEXT
+        }
+        val assistantIdInput = android.widget.EditText(this).apply {
+            hint = "Vapi Assistant ID (Optional)"
+        }
+
+        layout.addView(apiKeyInput)
+        layout.addView(assistantIdInput)
+
+        CoroutineScope(Dispatchers.Main).launch {
+            apiKeyInput.setText(settingsManager.vapiApiKey.first())
+            assistantIdInput.setText(settingsManager.vapiAssistantId.first())
+        }
+
+        androidx.appcompat.app.AlertDialog.Builder(this)
+            .setTitle("AI Calling Settings")
+            .setView(layout)
+            .setPositiveButton("Save") { _, _ ->
+                val apiKey = apiKeyInput.text.toString()
+                val assistantId = assistantIdInput.text.toString()
+                CoroutineScope(Dispatchers.IO).launch {
+                    settingsManager.saveVapiSettings(apiKey, assistantId)
+                }
+                Toast.makeText(this, "Settings saved. Now internet calls will be used.", Toast.LENGTH_SHORT).show()
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
     }
 }

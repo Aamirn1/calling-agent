@@ -22,6 +22,9 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import com.elevateedge.aicallingagent.utils.CallRecorder
 import com.elevateedge.aicallingagent.services.CallReceiver
+import com.elevateedge.aicallingagent.data.SettingsManager
+import com.elevateedge.aicallingagent.api.VapiManager
+import kotlinx.coroutines.flow.first
 
 
 class CallForegroundService : Service() {
@@ -30,6 +33,7 @@ class CallForegroundService : Service() {
     private lateinit var ttsManager: TtsManager
     private lateinit var repository: LeadRepository
     private lateinit var callRecorder: CallRecorder
+    private lateinit var settingsManager: SettingsManager
     private var currentLead: Lead? = null
     private var callReceiver: CallReceiver? = null
 
@@ -37,10 +41,9 @@ class CallForegroundService : Service() {
         super.onCreate()
         createNotificationChannel()
         repository = LeadRepository(AppDatabase.getDatabase(this).leadDao())
-        ttsManager = TtsManager(this) {
-            // Initialized
-        }
+        ttsManager = TtsManager(this) { }
         callRecorder = CallRecorder(getExternalFilesDir(null)!!)
+        settingsManager = SettingsManager(this)
         
         callReceiver = CallReceiver { state ->
             handleCallState(state)
@@ -93,24 +96,34 @@ class CallForegroundService : Service() {
         val leadId = intent?.getLongExtra("LEAD_ID", -1L) ?: -1L
         if (leadId != -1L) {
             serviceScope.launch {
-                val leads = repository.allLeads
-                // We need a way to get lead by ID, or just find it in the flow
-                // For simplicity, let's fetch it from DB directly
-                val lead = AppDatabase.getDatabase(this@CallForegroundService).leadDao().getLeadsByStatus("Pending")
-                // Wait, I should add getLeadById to DAO
-                // But I can also just re-fetch the first pending lead if ID is -1
-                
-                // Fetching first pending lead if we just want to start the session
-                val targetLead = if (leadId == -2L) repository.getFirstPendingLead() else null
-                // Realistically, the service should be started with the ID
-                
-                // Let's assume we have a getLeadById or just find it.
-                // Simplified: Fetch first pending lead if ID is provided (as a signal)
                 val leadToCall = repository.getFirstPendingLead()
                 
                 if (leadToCall != null) {
                     currentLead = leadToCall
-                    CallUtils.makeCall(this@CallForegroundService, leadToCall.phoneNumber)
+                    
+                    val apiKey = settingsManager.vapiApiKey.first()
+                    val assistantId = settingsManager.vapiAssistantId.first()
+                    
+                    if (!apiKey.isNullOrBlank()) {
+                        // USE VAPI (INTERNET CALL)
+                        val vapiManager = VapiManager(apiKey, if (assistantId.isNullOrBlank()) null else assistantId)
+                        val result = vapiManager.startCall(leadToCall)
+                        
+                        if (result.isSuccess) {
+                            // API call initiated. Vapi handles the VOIP part.
+                            // We wait for user hangup or API status (simplified here: mark as called)
+                            repository.updateLead(leadToCall.copy(status = "Calling (AI)"))
+                            // Sequential logic will repeat when onStartCommand is called again or service loops
+                            // For Vapi, we might need a webhook for completion, but for now we signal success.
+                        } else {
+                            // Fallback or error
+                            repository.updateLead(leadToCall.copy(status = "Error: ${result.exceptionOrNull()?.message}"))
+                            stopSelf()
+                        }
+                    } else {
+                        // USE SIM (TRADITIONAL CALL)
+                        CallUtils.makeCall(this@CallForegroundService, leadToCall.phoneNumber)
+                    }
                 } else {
                     stopSelf()
                 }

@@ -20,6 +20,19 @@
         android:layout_marginTop="24dp"
         android:layout_marginStart="24dp"/>
 
+    <ImageButton
+        android:id="@+id/settingsBtn"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:background="?attr/selectableItemBackgroundBorderless"
+        android:src="@android:drawable/ic_menu_preferences"
+        android:tint="#448AFF"
+        app:layout_constraintBottom_toBottomOf="@id/titleText"
+        app:layout_constraintStart_toEndOf="@id/titleText"
+        app:layout_constraintTop_toTopOf="@id/titleText"
+        android:layout_marginStart="8dp"
+        android:contentDescription="Settings" />
+
     <com.google.android.material.button.MaterialButton
         android:id="@+id/importLeadsBtn"
         style="@style/Widget.Material3.Button.TextButton"
